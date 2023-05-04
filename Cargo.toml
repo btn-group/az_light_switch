@@ -1,5 +1,5 @@
 [package]
-name = "azero_staking"
+name = "az_light_switch"
 version = "0.1.0"
 authors = ["Steven Chang <steven.chang@btn.group>"]
 edition = "2021"
@@ -11,11 +11,11 @@ scale = { package = "parity-scale-codec", version = "3", default-features = fals
 scale-info = { version = "2", default-features = false, features = ["derive"], optional = true }
 
 [lib]
-name = "azero_staking"
+name = "az_light_switch"
 path = "lib.rs"
 crate-type = [
-	# Used for normal contract Wasm blobs.
-	"cdylib",
+    # Used for normal contract Wasm blobs.
+    "cdylib",
 ]
 
 [features]
