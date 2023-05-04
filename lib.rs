@@ -1,11 +1,17 @@
+// The cfg_attr attribute conditionally includes attributes based on a configuration predicate.
+// https://doc.rust-lang.org/reference/conditional-compilation.html#the-cfg_attr-attribute
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// https://github.com/paritytech/ink/blob/v4.0.0-beta.1/crates/ink/macro/src/contract.rs
+// In a module annotated with #[ink::contract] these attributes are available...
+// https://github.com/paritytech/ink
 #[ink::contract]
 mod azero_staking {
 
     /// Defines the storage of your contract.
     /// Add new fields to the below struct in order
     /// to add new static storage fields to your contract.
+    /// https://paritytech.github.io/ink/ink_ir/enum.ImplItem.html#variant.Constructor
     #[ink(storage)]
     pub struct AzeroStaking {
         /// Stores a single `bool` value on the storage.
