@@ -6,19 +6,19 @@
 // In a module annotated with #[ink::contract] these attributes are available...
 // https://github.com/paritytech/ink
 #[ink::contract]
-mod azero_staking {
+mod az_light_switch {
 
     /// Defines the storage of your contract.
     /// Add new fields to the below struct in order
     /// to add new static storage fields to your contract.
     /// https://paritytech.github.io/ink/ink_ir/enum.ImplItem.html#variant.Constructor
     #[ink(storage)]
-    pub struct AzeroStaking {
+    pub struct LightSwitch {
         /// Stores a single `bool` value on the storage.
         value: bool,
     }
 
-    impl AzeroStaking {
+    impl LightSwitch {
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
         pub fn new(init_value: bool) -> Self {
@@ -59,17 +59,17 @@ mod azero_staking {
         /// We test if the default constructor does its job.
         #[ink::test]
         fn default_works() {
-            let azero_staking = AzeroStaking::default();
-            assert_eq!(azero_staking.get(), false);
+            let az_light_switch = LightSwitch::default();
+            assert_eq!(az_light_switch.get(), false);
         }
 
         /// We test a simple use case of our contract.
         #[ink::test]
         fn it_works() {
-            let mut azero_staking = AzeroStaking::new(false);
-            assert_eq!(azero_staking.get(), false);
-            azero_staking.flip();
-            assert_eq!(azero_staking.get(), true);
+            let mut az_light_switch = LightSwitch::new(false);
+            assert_eq!(az_light_switch.get(), false);
+            az_light_switch.flip();
+            assert_eq!(az_light_switch.get(), true);
         }
     }
 }
