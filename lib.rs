@@ -14,23 +14,27 @@ mod az_light_switch {
     /// https://paritytech.github.io/ink/ink_ir/enum.ImplItem.html#variant.Constructor
     #[ink(storage)]
     pub struct LightSwitch {
-        /// Stores a single `bool` value on the storage.
+        /// Stores config in storage
         on: bool,
+        on_fee: u32,
+        off_payment: u32,
     }
 
     impl LightSwitch {
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
-        pub fn new() -> Self {
-            Self { on: false }
+        pub fn new(on_fee: u32, off_payment: u32) -> Self {
+            Self {
+                on: false,
+                on_fee,
+                off_payment,
+            }
         }
 
-        /// Constructor that initializes the `bool` value to `false`.
-        ///
         /// Constructors can delegate to other constructors.
         #[ink(constructor)]
         pub fn default() -> Self {
-            Self::new()
+            Self::new(2, 1)
         }
 
         /// A message that can be called on instantiated contracts.
@@ -66,7 +70,7 @@ mod az_light_switch {
         /// We test a simple use case of our contract.
         #[ink::test]
         fn it_works() {
-            let mut az_light_switch = LightSwitch::new();
+            let mut az_light_switch = LightSwitch::default();
             assert_eq!(az_light_switch.get(), false);
             az_light_switch.flip();
             assert_eq!(az_light_switch.get(), true);
