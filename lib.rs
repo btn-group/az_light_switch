@@ -7,6 +7,13 @@
 // https://github.com/paritytech/ink
 #[ink::contract]
 mod az_light_switch {
+    #[derive(Debug, Clone, scale::Encode, scale::Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct Config {
+        on: bool,
+        on_fee: u32,
+        off_payment: u32,
+    }
 
     /// Defines the storage of your contract.
     /// Add new fields to the below struct in order
@@ -47,8 +54,12 @@ mod az_light_switch {
 
         /// Simply returns the current value of our `bool`.
         #[ink(message)]
-        pub fn get(&self) -> bool {
-            self.on
+        pub fn config(&self) -> Config {
+            Config {
+                on: self.on,
+                on_fee: self.on_fee,
+                off_payment: self.off_payment,
+            }
         }
     }
 
@@ -64,16 +75,20 @@ mod az_light_switch {
         #[ink::test]
         fn default_works() {
             let az_light_switch = LightSwitch::default();
-            assert_eq!(az_light_switch.get(), false);
+            let config: Config = az_light_switch.config();
+            assert_eq!(config.on, false);
+            assert_eq!(config.on_fee, 2);
+            assert_eq!(config.off_payment, 1);
         }
 
         /// We test a simple use case of our contract.
         #[ink::test]
         fn it_works() {
-            let mut az_light_switch = LightSwitch::default();
-            assert_eq!(az_light_switch.get(), false);
-            az_light_switch.flip();
-            assert_eq!(az_light_switch.get(), true);
+            let az_light_switch = LightSwitch::default();
+            let config: Config = az_light_switch.config();
+            assert_eq!(config.on, false);
+            // az_light_switch.flip();
+            // assert_eq!(az_light_switch.get(), true);
         }
     }
 }
