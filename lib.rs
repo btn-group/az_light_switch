@@ -15,14 +15,14 @@ mod az_light_switch {
     #[ink(storage)]
     pub struct LightSwitch {
         /// Stores a single `bool` value on the storage.
-        value: bool,
+        on: bool,
     }
 
     impl LightSwitch {
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
         pub fn new(init_value: bool) -> Self {
-            Self { value: init_value }
+            Self { on: init_value }
         }
 
         /// Constructor that initializes the `bool` value to `false`.
@@ -38,13 +38,13 @@ mod az_light_switch {
         /// to `false` and vice versa.
         #[ink(message)]
         pub fn flip(&mut self) {
-            self.value = !self.value;
+            self.on = !self.on;
         }
 
         /// Simply returns the current value of our `bool`.
         #[ink(message)]
         pub fn get(&self) -> bool {
-            self.value
+            self.on
         }
     }
 
