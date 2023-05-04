@@ -21,8 +21,8 @@ mod az_light_switch {
     impl LightSwitch {
         /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
-        pub fn new(init_value: bool) -> Self {
-            Self { on: init_value }
+        pub fn new() -> Self {
+            Self { on: false }
         }
 
         /// Constructor that initializes the `bool` value to `false`.
@@ -30,7 +30,7 @@ mod az_light_switch {
         /// Constructors can delegate to other constructors.
         #[ink(constructor)]
         pub fn default() -> Self {
-            Self::new(Default::default())
+            Self::new()
         }
 
         /// A message that can be called on instantiated contracts.
@@ -66,7 +66,7 @@ mod az_light_switch {
         /// We test a simple use case of our contract.
         #[ink::test]
         fn it_works() {
-            let mut az_light_switch = LightSwitch::new(false);
+            let mut az_light_switch = LightSwitch::new();
             assert_eq!(az_light_switch.get(), false);
             az_light_switch.flip();
             assert_eq!(az_light_switch.get(), true);
