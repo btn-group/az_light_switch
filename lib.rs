@@ -12,8 +12,10 @@ mod az_light_switch {
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum LightSwitchError {
+        LightAlreadyOff,
         LightAlreadyOn,
         IncorrectFee(String),
+        InsufficientBalance(String),
     }
 
     // === STRUCTS ===
@@ -66,6 +68,34 @@ mod az_light_switch {
             Ok(())
         }
 
+        #[ink(message, payable)]
+        pub fn turn_off(&mut self) -> Result<(), LightSwitchError> {
+            if !self.on {
+                return Err(LightSwitchError::LightAlreadyOff);
+            }
+            if self.env().balance() < self.off_payment {
+                return Err(LightSwitchError::InsufficientBalance(format!(
+                    "Contract balance: {}. Off payment: {}",
+                    self.env().balance(),
+                    self.off_payment
+                )));
+            }
+            if self
+                .env()
+                .transfer(self.env().caller(), self.off_payment)
+                .is_err()
+            {
+                panic!(
+                    "requested transfer failed. this can be the case if the contract does not\
+                     have sufficient free funds or if the transfer would have brought the\
+                     contract's balance below minimum balance."
+                )
+            }
+
+            self.on = false;
+            Ok(())
+        }
+
         #[ink(message)]
         pub fn config(&self) -> Config {
             Config {
@@ -103,6 +133,10 @@ mod az_light_switch {
         use openbrush::test_utils;
 
         // === HELPER FUNCTIONS ===
+        fn contract_id() -> AccountId {
+            ink::env::test::callee::<ink::env::DefaultEnvironment>()
+        }
+
         fn get_balance(account_id: AccountId) -> Balance {
             ink::env::test::get_account_balance::<ink::env::DefaultEnvironment>(account_id)
                 .expect("Cannot get account balance")
@@ -113,6 +147,40 @@ mod az_light_switch {
         }
 
         // === TESTS ===
+        #[ink::test]
+        fn test_turn_off() {
+            let accounts = test_utils::accounts();
+            let mut az_light_switch = LightSwitch::new(1, 1);
+            // when light is already off
+            // * it raises an error
+            let mut result = az_light_switch.turn_off();
+            assert_eq!(result, Err(LightSwitchError::LightAlreadyOff));
+            // when light is on
+            az_light_switch.on = true;
+            // = when contract balance in less than off_payment
+            set_balance(contract_id(), 0);
+            // = * it raises an error
+            result = az_light_switch.turn_off();
+            assert_eq!(
+                result,
+                Err(LightSwitchError::InsufficientBalance(format!(
+                    "Contract balance: {}. Off payment: {}",
+                    get_balance(contract_id()),
+                    az_light_switch.off_payment
+                )))
+            );
+            // = when contract balance in equal to or greater than off_payment
+            set_balance(contract_id(), az_light_switch.off_payment);
+            test_utils::change_caller(accounts.bob);
+            set_balance(accounts.bob, 0);
+            // = * is turns light on
+            result = az_light_switch.turn_off();
+            assert!(result.is_ok());
+            assert_eq!(az_light_switch.on, false);
+            // = * it sends the off_payment to the caller
+            assert_eq!(get_balance(accounts.bob), az_light_switch.off_payment)
+        }
+
         #[ink::test]
         fn test_turn_on() {
             let mut az_light_switch = LightSwitch::new(1, 1);
