@@ -72,16 +72,6 @@ mod az_light_switch {
     //     /// Imports all the definitions from the outer scope so we can use them here.
     //     use super::*;
 
-    //     /// We test if the default constructor does its job.
-    //     #[ink::test]
-    //     fn default_works() {
-    //         let az_light_switch = LightSwitch::default();
-    //         let config: Config = az_light_switch.config();
-    //         assert_eq!(config.on, false);
-    //         assert_eq!(config.on_fee, 2);
-    //         assert_eq!(config.off_payment, 1);
-    //     }
-
     //     /// We test a simple use case of our contract.
     //     #[ink::test]
     //     fn it_works() {
