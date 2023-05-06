@@ -8,13 +8,21 @@
 #[ink::contract]
 mod az_light_switch {
     use openbrush::{contracts::ownable::*, modifiers, traits::Storage};
+    // === ENUMS ===
+    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum LightSwitchError {
+        LightAlreadyOn,
+        IncorrectFee(String),
+    }
 
+    // === STRUCTS ===
     #[derive(Debug, Clone, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Config {
         on: bool,
-        on_fee: u32,
-        off_payment: u32,
+        on_fee: u128,
+        off_payment: u128,
         admin: AccountId,
     }
 
@@ -25,18 +33,16 @@ mod az_light_switch {
     #[ink(storage)]
     #[derive(Default, Storage)]
     pub struct LightSwitch {
-        /// Stores config in storage
         on: bool,
-        on_fee: u32,
-        off_payment: u32,
+        on_fee: u128,
+        off_payment: u128,
         #[storage_field]
         ownable: ownable::Data,
     }
 
     impl LightSwitch {
-        /// Constructor that initializes the `bool` value to the given `init_value`.
         #[ink(constructor)]
-        pub fn new(on_fee: u32, off_payment: u32) -> Self {
+        pub fn new(on_fee: u128, off_payment: u128) -> Self {
             let mut instance = Self::default();
             instance._init_with_owner(Self::env().caller());
             instance.on_fee = on_fee;
@@ -44,15 +50,22 @@ mod az_light_switch {
             instance
         }
 
-        /// A message that can be called on instantiated contracts.
-        /// This one flips the value of the stored `bool` from `true`
-        /// to `false` and vice versa.
-        #[ink(message)]
-        pub fn flip(&mut self) {
-            self.on = !self.on;
+        #[ink(message, payable)]
+        pub fn turn_on(&mut self) -> Result<(), LightSwitchError> {
+            if self.on {
+                return Err(LightSwitchError::LightAlreadyOn);
+            }
+            if self.env().transferred_value() != self.on_fee {
+                return Err(LightSwitchError::IncorrectFee(format!(
+                    "Fee required: {}",
+                    self.on_fee
+                )));
+            }
+
+            self.on = true;
+            Ok(())
         }
 
-        /// Simply returns the current value of our `bool`.
         #[ink(message)]
         pub fn config(&self) -> Config {
             Config {
@@ -68,8 +81,8 @@ mod az_light_switch {
         pub fn update_config(
             &mut self,
             admin: Option<AccountId>,
-            on_fee: Option<u32>,
-            off_payment: Option<u32>,
+            on_fee: Option<u128>,
+            off_payment: Option<u128>,
         ) -> Result<(), OwnableError> {
             if admin.is_some() {
                 self.ownable.transfer_ownership(admin.unwrap())?;
@@ -88,6 +101,50 @@ mod az_light_switch {
     mod tests {
         use super::*;
         use openbrush::test_utils;
+
+        // === HELPER FUNCTIONS ===
+        fn get_balance(account_id: AccountId) -> Balance {
+            ink::env::test::get_account_balance::<ink::env::DefaultEnvironment>(account_id)
+                .expect("Cannot get account balance")
+        }
+
+        fn set_balance(account_id: AccountId, balance: Balance) {
+            ink::env::test::set_account_balance::<ink::env::DefaultEnvironment>(account_id, balance)
+        }
+
+        // === TESTS ===
+        #[ink::test]
+        fn test_turn_on() {
+            let mut az_light_switch = LightSwitch::new(1, 1);
+            // when light is already on
+            // * it raises an error
+            az_light_switch.on = true;
+            let mut result = az_light_switch.turn_on();
+            assert_eq!(result, Err(LightSwitchError::LightAlreadyOn));
+            // when light is off
+            az_light_switch.on = false;
+            // = when wrong amount is sent in
+            set_balance(az_light_switch.ownable.owner(), 10);
+            ink::env::test::set_value_transferred::<ink::env::DefaultEnvironment>(
+                az_light_switch.on_fee + 1,
+            );
+            result = az_light_switch.turn_on();
+            assert_eq!(
+                result,
+                Err(LightSwitchError::IncorrectFee(format!(
+                    "Fee required: {}",
+                    az_light_switch.on_fee
+                )))
+            );
+            // = when correct amount is sent in
+            ink::env::test::set_value_transferred::<ink::env::DefaultEnvironment>(
+                az_light_switch.on_fee,
+            );
+            // = * is turns light on
+            result = az_light_switch.turn_on();
+            assert!(result.is_ok());
+            assert_eq!(az_light_switch.on, true);
+        }
 
         #[ink::test]
         fn test_update_config() {
