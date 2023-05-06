@@ -6,3 +6,5 @@
 2. https://github.com/paritytech/ink-examples/blob/main/contract-transfer/lib.rs
 3. https://github.com/paritytech/ink
 4. https://learn.brushfam.io/docs/OpenBrush/smart-contracts/ownable
+5. https://github.com/Brushfam/openbrush-contracts/blob/main/lang/src/test_utils.rs#L39
+6. https://github.com/Brushfam/openbrush-contracts/blob/main/contracts/src/access/ownable/mod.rs

@@ -87,20 +87,20 @@ mod az_light_switch {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use ink::env::{test, DefaultEnvironment};
+        use openbrush::test_utils;
 
         #[ink::test]
         fn test_update_config() {
-            let accounts = test::default_accounts::<DefaultEnvironment>();
-            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let accounts = test_utils::accounts();
+            test_utils::change_caller(accounts.alice);
             let mut az_light_switch = LightSwitch::new(1, 1);
             // when called by a non-admin
-            test::set_caller::<DefaultEnvironment>(accounts.bob);
+            test_utils::change_caller(accounts.bob);
             // * it raises an error
             let mut result = az_light_switch.update_config(None, None, None);
             assert_eq!(result, Err(OwnableError::CallerIsNotOwner));
             // when called by an admin
-            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            test_utils::change_caller(accounts.alice);
             result = az_light_switch.update_config(Some(accounts.django), Some(3), Some(4));
             assert!(result.is_ok());
             let config = az_light_switch.config();
