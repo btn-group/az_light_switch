@@ -62,24 +62,54 @@ mod az_light_switch {
                 off_payment: self.off_payment,
             }
         }
+
+        #[ink(message)]
+        #[modifiers(only_owner)]
+        pub fn update_config(
+            &mut self,
+            admin: Option<AccountId>,
+            on_fee: Option<u32>,
+            off_payment: Option<u32>,
+        ) -> Result<(), OwnableError> {
+            if admin.is_some() {
+                self.ownable.transfer_ownership(admin.unwrap())?;
+            }
+            if on_fee.is_some() {
+                self.on_fee = on_fee.unwrap();
+            }
+            if off_payment.is_some() {
+                self.off_payment = off_payment.unwrap();
+            }
+            Ok(())
+        }
     }
 
-    // /// Unit tests in Rust are normally defined within such a `#[cfg(test)]`
-    // /// module and test functions are marked with a `#[test]` attribute.
-    // /// The below code is technically just normal Rust code.
-    // #[cfg(test)]
-    // mod tests {
-    //     /// Imports all the definitions from the outer scope so we can use them here.
-    //     use super::*;
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use ink::env::{test, DefaultEnvironment};
 
-    //     /// We test a simple use case of our contract.
-    //     #[ink::test]
-    //     fn it_works() {
-    //         let az_light_switch = LightSwitch::default();
-    //         let config: Config = az_light_switch.config();
-    //         assert_eq!(config.on, false);
-    //         // az_light_switch.flip();
-    //         // assert_eq!(az_light_switch.get(), true);
-    //     }
-    // }
+        #[ink::test]
+        fn test_update_config() {
+            let accounts = test::default_accounts::<DefaultEnvironment>();
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            let mut az_light_switch = LightSwitch::new(1, 1);
+            // when called by a non-admin
+            test::set_caller::<DefaultEnvironment>(accounts.bob);
+            // * it raises an error
+            let mut result = az_light_switch.update_config(None, None, None);
+            assert_eq!(result, Err(OwnableError::CallerIsNotOwner));
+            // when called by an admin
+            test::set_caller::<DefaultEnvironment>(accounts.alice);
+            result = az_light_switch.update_config(Some(accounts.django), Some(3), Some(4));
+            assert!(result.is_ok());
+            let config = az_light_switch.config();
+            // * it updates the admin
+            assert_eq!(config.admin, accounts.django);
+            // * it updates the on_fee
+            assert_eq!(config.on_fee, 3);
+            // * it updates the off_payment
+            assert_eq!(config.off_payment, 4)
+        }
+    }
 }
