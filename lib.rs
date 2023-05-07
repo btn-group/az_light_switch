@@ -26,8 +26,8 @@ mod az_light_switch {
         on: bool,
         minimum_on_time_in_seconds: u64,
         on_time: Option<u64>,
-        on_fee: u128,
-        off_payment: u128,
+        on_fee: Balance,
+        off_payment: Balance,
         admin: AccountId,
     }
 
@@ -41,15 +41,15 @@ mod az_light_switch {
         on: bool,
         minimum_on_time_in_seconds: u64,
         on_time: Option<u64>,
-        on_fee: u128,
-        off_payment: u128,
+        on_fee: Balance,
+        off_payment: Balance,
         #[storage_field]
         ownable: ownable::Data,
     }
 
     impl LightSwitch {
         #[ink(constructor)]
-        pub fn new(on_fee: u128, off_payment: u128, minimum_on_time_in_seconds: u64) -> Self {
+        pub fn new(on_fee: Balance, off_payment: Balance, minimum_on_time_in_seconds: u64) -> Self {
             let mut instance = Self::default();
             instance._init_with_owner(Self::env().caller());
             instance.on_fee = on_fee;
@@ -119,8 +119,8 @@ mod az_light_switch {
         pub fn update_config(
             &mut self,
             admin: Option<AccountId>,
-            on_fee: Option<u128>,
-            off_payment: Option<u128>,
+            on_fee: Option<Balance>,
+            off_payment: Option<Balance>,
             minimum_on_time_in_seconds: Option<u64>,
         ) -> Result<(), OwnableError> {
             if admin.is_some() {
