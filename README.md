@@ -89,6 +89,8 @@ substrate-contracts-node
 
 You can interact with your node using the [Contracts UI](https://contracts-ui.substrate.io/). Once you have the webpage open, click on the dropdown selector at the top left corner and choose "Local Node".
 
+Note that blocks are only created when you execute a function in substrate-contracts-node, so trigger a another function first if a function depends on a time delay.
+
 ## References
 
 1. https://realtakahashi-work.medium.com/substrate-ink-how-to-define-own-struct-%E7%8B%AC%E8%87%AA%E6%A7%8B%E9%80%A0%E4%BD%93%E3%81%AE%E5%AE%A3%E8%A8%80%E6%96%B9%E6%B3%95-8f4893089ba4
