@@ -162,7 +162,7 @@ mod az_light_switch {
             let since_the_epoch = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .expect("Time went backwards");
-            since_the_epoch.as_secs() + since_the_epoch.subsec_nanos() as u64 / 1_000_000_000
+            since_the_epoch.as_millis().try_into().unwrap()
         }
 
         // === TESTS ===
