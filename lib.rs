@@ -14,9 +14,9 @@ mod az_light_switch {
     pub enum LightSwitchError {
         LightAlreadyOff,
         LightAlreadyOn,
-        IncorrectFee(String),
-        InsufficientBalance(String),
-        InsufficientTimePassed(String),
+        IncorrectFee,
+        InsufficientBalance,
+        InsufficientTimePassed,
     }
 
     // === STRUCTS ===
@@ -64,10 +64,7 @@ mod az_light_switch {
                 return Err(LightSwitchError::LightAlreadyOn);
             }
             if self.env().transferred_value() != self.on_fee {
-                return Err(LightSwitchError::IncorrectFee(format!(
-                    "Fee required: {}",
-                    self.on_fee
-                )));
+                return Err(LightSwitchError::IncorrectFee);
             }
 
             self.on_time = Some(self.env().block_timestamp());
@@ -81,20 +78,12 @@ mod az_light_switch {
                 return Err(LightSwitchError::LightAlreadyOff);
             }
             if self.env().balance() < self.off_payment {
-                return Err(LightSwitchError::InsufficientBalance(format!(
-                    "Contract balance: {}. Off payment: {}",
-                    self.env().balance(),
-                    self.off_payment
-                )));
+                return Err(LightSwitchError::InsufficientBalance);
             }
             if self.env().block_timestamp()
                 < self.on_time.unwrap() + self.minimum_on_time_in_seconds
             {
-                return Err(LightSwitchError::InsufficientTimePassed(format!(
-                    "Current time: {} seconds. Can turn off after: {} seconds",
-                    self.env().block_timestamp(),
-                    self.on_time.unwrap() + self.minimum_on_time_in_seconds
-                )));
+                return Err(LightSwitchError::InsufficientTimePassed);
             }
             if self
                 .env()
@@ -191,14 +180,7 @@ mod az_light_switch {
             set_balance(contract_id(), 0);
             // = * it raises an error
             result = az_light_switch.turn_off();
-            assert_eq!(
-                result,
-                Err(LightSwitchError::InsufficientBalance(format!(
-                    "Contract balance: {}. Off payment: {}",
-                    get_balance(contract_id()),
-                    az_light_switch.off_payment
-                )))
-            );
+            assert_eq!(result, Err(LightSwitchError::InsufficientBalance));
             // = when contract balance in equal to or greater than off_payment
             set_balance(contract_id(), az_light_switch.off_payment);
             test_utils::change_caller(accounts.bob);
@@ -209,14 +191,7 @@ mod az_light_switch {
             az_light_switch.on_time = Some(current_time);
             // == * it raises and error
             result = az_light_switch.turn_off();
-            assert_eq!(
-                result,
-                Err(LightSwitchError::InsufficientTimePassed(format!(
-                    "Current time: {} seconds. Can turn off after: {} seconds",
-                    current_time,
-                    az_light_switch.on_time.unwrap() + az_light_switch.minimum_on_time_in_seconds
-                ))),
-            );
+            assert_eq!(result, Err(LightSwitchError::InsufficientTimePassed));
             // == when minimum_on_time_in_seconds has passed
             az_light_switch.on_time = Some(current_time - 1);
             // == * is turns light off
@@ -245,13 +220,7 @@ mod az_light_switch {
                 az_light_switch.on_fee + 1,
             );
             result = az_light_switch.turn_on();
-            assert_eq!(
-                result,
-                Err(LightSwitchError::IncorrectFee(format!(
-                    "Fee required: {}",
-                    az_light_switch.on_fee
-                )))
-            );
+            assert_eq!(result, Err(LightSwitchError::IncorrectFee));
             // = when correct amount is sent in
             ink::env::test::set_value_transferred::<ink::env::DefaultEnvironment>(
                 az_light_switch.on_fee,
