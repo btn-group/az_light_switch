@@ -54,6 +54,8 @@ This is an Aleph Zero smart contract that we created to help us understand and e
 
 To get a local copy up and running follow these simple example steps.
 
+* Open brush required that I use rust nightly but building the contract required stable.
+
 ### Prerequisites
 
 * A pre-requisite for compiling smart contracts is to have a stable Rust version and Cargo installed. Here's an [installation guide](https://doc.rust-lang.org/cargo/getting-started/installation.html).
