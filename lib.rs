@@ -24,8 +24,8 @@ mod az_light_switch {
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub struct Config {
         on: bool,
-        minimum_on_time_in_seconds: u64,
-        on_time: Option<u64>,
+        minimum_on_time_in_ms: Timestamp,
+        on_time: Option<Timestamp>,
         on_fee: Balance,
         off_payment: Balance,
         admin: AccountId,
@@ -39,8 +39,8 @@ mod az_light_switch {
     #[derive(Default, Storage)]
     pub struct LightSwitch {
         on: bool,
-        minimum_on_time_in_seconds: u64,
-        on_time: Option<u64>,
+        minimum_on_time_in_ms: Timestamp,
+        on_time: Option<Timestamp>,
         on_fee: Balance,
         off_payment: Balance,
         #[storage_field]
@@ -49,12 +49,16 @@ mod az_light_switch {
 
     impl LightSwitch {
         #[ink(constructor)]
-        pub fn new(on_fee: Balance, off_payment: Balance, minimum_on_time_in_seconds: u64) -> Self {
+        pub fn new(
+            on_fee: Balance,
+            off_payment: Balance,
+            minimum_on_time_in_ms: Timestamp,
+        ) -> Self {
             let mut instance = Self::default();
             instance._init_with_owner(Self::env().caller());
             instance.on_fee = on_fee;
             instance.off_payment = off_payment;
-            instance.minimum_on_time_in_seconds = minimum_on_time_in_seconds;
+            instance.minimum_on_time_in_ms = minimum_on_time_in_ms;
             instance
         }
 
@@ -80,9 +84,7 @@ mod az_light_switch {
             if self.env().balance() < self.off_payment {
                 return Err(LightSwitchError::InsufficientBalance);
             }
-            if self.env().block_timestamp()
-                < self.on_time.unwrap() + self.minimum_on_time_in_seconds
-            {
+            if self.env().block_timestamp() < self.on_time.unwrap() + self.minimum_on_time_in_ms {
                 return Err(LightSwitchError::InsufficientTimePassed);
             }
             if self
@@ -107,7 +109,7 @@ mod az_light_switch {
             Config {
                 admin: self.ownable.owner(),
                 on: self.on,
-                minimum_on_time_in_seconds: self.minimum_on_time_in_seconds,
+                minimum_on_time_in_ms: self.minimum_on_time_in_ms,
                 on_time: self.on_time,
                 on_fee: self.on_fee,
                 off_payment: self.off_payment,
@@ -121,7 +123,7 @@ mod az_light_switch {
             admin: Option<AccountId>,
             on_fee: Option<Balance>,
             off_payment: Option<Balance>,
-            minimum_on_time_in_seconds: Option<u64>,
+            minimum_on_time_in_ms: Option<Timestamp>,
         ) -> Result<(), OwnableError> {
             if admin.is_some() {
                 self.ownable.transfer_ownership(admin.unwrap())?;
@@ -132,8 +134,8 @@ mod az_light_switch {
             if off_payment.is_some() {
                 self.off_payment = off_payment.unwrap();
             }
-            if minimum_on_time_in_seconds.is_some() {
-                self.minimum_on_time_in_seconds = minimum_on_time_in_seconds.unwrap();
+            if minimum_on_time_in_ms.is_some() {
+                self.minimum_on_time_in_ms = minimum_on_time_in_ms.unwrap();
             }
             Ok(())
         }
@@ -185,14 +187,14 @@ mod az_light_switch {
             set_balance(contract_id(), az_light_switch.off_payment);
             test_utils::change_caller(accounts.bob);
             set_balance(accounts.bob, 0);
-            // == when minimum_on_time_in_seconds has not passed
-            let current_time: u64 = get_current_time();
+            // == when minimum_on_time_in_ms has not passed
+            let current_time: Timestamp = get_current_time();
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(current_time);
             az_light_switch.on_time = Some(current_time);
             // == * it raises and error
             result = az_light_switch.turn_off();
             assert_eq!(result, Err(LightSwitchError::InsufficientTimePassed));
-            // == when minimum_on_time_in_seconds has passed
+            // == when minimum_on_time_in_ms has passed
             az_light_switch.on_time = Some(current_time - 1);
             // == * is turns light off
             result = az_light_switch.turn_off();
@@ -225,7 +227,7 @@ mod az_light_switch {
             ink::env::test::set_value_transferred::<ink::env::DefaultEnvironment>(
                 az_light_switch.on_fee,
             );
-            let current_time: u64 = get_current_time();
+            let current_time: Timestamp = get_current_time();
             ink::env::test::set_block_timestamp::<ink::env::DefaultEnvironment>(current_time);
             result = az_light_switch.turn_on();
             assert!(result.is_ok());
@@ -257,8 +259,8 @@ mod az_light_switch {
             assert_eq!(config.on_fee, 3);
             // * it updates the off_payment
             assert_eq!(config.off_payment, 4);
-            // * it updates the minimum_on_time_in_seconds
-            assert_eq!(config.minimum_on_time_in_seconds, 5)
+            // * it updates the minimum_on_time_in_ms
+            assert_eq!(config.minimum_on_time_in_ms, 5)
         }
     }
 }
