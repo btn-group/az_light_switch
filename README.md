@@ -5,7 +5,7 @@
     <img src="images/logo.png" alt="Logo" height="80">
   </a>
 
-  <h3 align="center">Aleph Zero Light Switch Smart Contract by btn.group</h3>
+  <h3 align="center">Aleph Zero Light Switch</h3>
 </div>
 
 <!-- TABLE OF CONTENTS -->
