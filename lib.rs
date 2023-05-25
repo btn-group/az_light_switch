@@ -31,6 +31,29 @@ mod az_light_switch {
         admin: AccountId,
     }
 
+    // Events
+    // Many of these fields wouldn't be necessary for real use
+    // but they are here so that we can look at them in the block explorer
+    #[ink(event)]
+    pub struct TurnOn {
+        #[ink(topic)]
+        admin: AccountId,
+        #[ink(topic)]
+        caller: AccountId,
+        on: bool,
+        value: Balance,
+    }
+
+    #[ink(event)]
+    pub struct TurnOff {
+        #[ink(topic)]
+        admin: AccountId,
+        #[ink(topic)]
+        caller: AccountId,
+        on: bool,
+        value: Balance,
+    }
+
     /// Defines the storage of your contract.
     /// Add new fields to the below struct in order
     /// to add new static storage fields to your contract.
@@ -73,6 +96,14 @@ mod az_light_switch {
 
             self.on_time = Some(self.env().block_timestamp());
             self.on = true;
+
+            self.env().emit_event(TurnOn {
+                admin: self.ownable.owner(),
+                caller: Self::env().caller(),
+                on: self.on,
+                value: self.on_fee,
+            });
+
             Ok(())
         }
 
@@ -101,6 +132,14 @@ mod az_light_switch {
 
             self.on_time = None;
             self.on = false;
+
+            self.env().emit_event(TurnOff {
+                admin: self.ownable.owner(),
+                caller: Self::env().caller(),
+                on: self.on,
+                value: self.off_payment,
+            });
+
             Ok(())
         }
 
@@ -203,7 +242,7 @@ mod az_light_switch {
             // == * it sends the off_payment to the caller
             assert_eq!(get_balance(accounts.bob), az_light_switch.off_payment);
             // == * it sets the on_time to None
-            assert_eq!(az_light_switch.on_time, None)
+            assert_eq!(az_light_switch.on_time, None);
         }
 
         #[ink::test]
