@@ -108,7 +108,9 @@ mod az_light_switch {
         value: Balance,
     }
 
+    // Trialling anonymous with this one
     #[ink(event)]
+    #[ink(anonymous)]
     pub struct TurnOff {
         #[ink(topic)]
         admin: AccountId,
