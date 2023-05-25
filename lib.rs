@@ -7,6 +7,7 @@
 // https://github.com/paritytech/ink
 #[ink::contract]
 mod az_light_switch {
+    use ink::storage::Mapping;
     use openbrush::{contracts::ownable::*, modifiers, traits::Storage};
     // === ENUMS ===
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
@@ -29,6 +30,69 @@ mod az_light_switch {
         on_fee: Balance,
         off_payment: Balance,
         admin: AccountId,
+    }
+
+    #[derive(scale::Decode, scale::Encode)]
+    #[cfg_attr(
+        feature = "std",
+        derive(scale_info::TypeInfo, ink::storage::traits::StorageLayout)
+    )]
+    #[derive(Debug, Clone)]
+    pub struct Record {
+        caller: AccountId,
+        on: bool,
+        block_height: BlockNumber,
+    }
+
+    #[derive(Debug, Default)]
+    #[ink::storage_item]
+    pub struct Records {
+        values: Mapping<u32, Record>,
+        length: u32,
+    }
+    impl Records {
+        /// Accessing non-existent keys will return the default value.
+        pub fn index(&self, page: u32, size: u8) -> Vec<Record> {
+            let mut records: Vec<Record> = vec![];
+            if self.length == 0 {
+                return records;
+            }
+
+            let records_to_skip: Option<u32> = page.checked_mul(size.into());
+            let starting_number: u32;
+            let ending_number: u32;
+            if records_to_skip.is_none() {
+                ending_number = u32::MAX;
+                starting_number = ending_number.checked_sub(size.into()).unwrap();
+            } else {
+                let records_to_skip_unwrapped: u32 = records_to_skip.unwrap();
+                let ending_number_wrapped: Option<u32> =
+                    self.length.checked_sub(records_to_skip_unwrapped);
+                if ending_number_wrapped.is_none() {
+                    return records;
+                }
+                ending_number = ending_number_wrapped.unwrap();
+                starting_number = ending_number.checked_sub(size.into()).unwrap_or(0);
+            }
+            for i in (starting_number..=ending_number).rev() {
+                records.push(self.values.get(i).unwrap())
+            }
+            records
+        }
+
+        /// Inserting into the map increases its length by one.
+        pub fn set(&mut self, value: &Record) {
+            if self.values.insert(self.length, value).is_none() {
+                self.length += 1
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, scale::Encode, scale::Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub struct RecordsForUser {
+        values: Vec<Record>,
+        length: u32,
     }
 
     // Events
@@ -68,6 +132,7 @@ mod az_light_switch {
         off_payment: Balance,
         #[storage_field]
         ownable: ownable::Data,
+        records: Records,
     }
 
     impl LightSwitch {
@@ -82,6 +147,10 @@ mod az_light_switch {
             instance.on_fee = on_fee;
             instance.off_payment = off_payment;
             instance.minimum_on_time_in_ms = minimum_on_time_in_ms;
+            instance.records = Records {
+                values: Mapping::default(),
+                length: 0,
+            };
             instance
         }
 
@@ -97,11 +166,19 @@ mod az_light_switch {
             self.on_time = Some(self.env().block_timestamp());
             self.on = true;
 
+            // emit event
             self.env().emit_event(TurnOn {
                 admin: self.ownable.owner(),
                 caller: Self::env().caller(),
                 on: self.on,
                 value: self.on_fee,
+            });
+
+            // store record
+            self.records.set(&Record {
+                caller: Self::env().caller(),
+                on: self.on,
+                block_height: self.env().block_number(),
             });
 
             Ok(())
@@ -133,11 +210,19 @@ mod az_light_switch {
             self.on_time = None;
             self.on = false;
 
+            // emit event
             self.env().emit_event(TurnOff {
                 admin: self.ownable.owner(),
                 caller: Self::env().caller(),
                 on: self.on,
                 value: self.off_payment,
+            });
+
+            // store record
+            self.records.set(&Record {
+                caller: Self::env().caller(),
+                on: self.on,
+                block_height: self.env().block_number(),
             });
 
             Ok(())
@@ -152,6 +237,14 @@ mod az_light_switch {
                 on_time: self.on_time,
                 on_fee: self.on_fee,
                 off_payment: self.off_payment,
+            }
+        }
+
+        #[ink(message)]
+        pub fn records(&self, page: u32, size: u8) -> RecordsForUser {
+            RecordsForUser {
+                values: self.records.index(page, size),
+                length: self.records.length,
             }
         }
 
