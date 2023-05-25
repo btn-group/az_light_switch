@@ -7,6 +7,7 @@
 // https://github.com/paritytech/ink
 #[ink::contract]
 mod az_light_switch {
+    use ink::prelude::{vec, vec::Vec};
     use ink::storage::Mapping;
     use openbrush::{contracts::ownable::*, modifiers, traits::Storage};
     // === ENUMS ===
