@@ -52,7 +52,6 @@ mod az_light_switch {
         length: u32,
     }
     impl Records {
-        /// Accessing non-existent keys will return the default value.
         pub fn index(&self, page: u32, size: u8) -> Vec<Record> {
             let mut records: Vec<Record> = vec![];
             if self.length == 0 {
@@ -81,8 +80,7 @@ mod az_light_switch {
             records
         }
 
-        /// Inserting into the map increases its length by one.
-        pub fn set(&mut self, value: &Record) {
+        pub fn create(&mut self, value: &Record) {
             if self.values.insert(self.length, value).is_none() {
                 self.length += 1
             }
@@ -178,7 +176,7 @@ mod az_light_switch {
             });
 
             // store record
-            self.records.set(&Record {
+            self.records.create(&Record {
                 caller: Self::env().caller(),
                 on: self.on,
                 block_height: self.env().block_number(),
@@ -222,7 +220,7 @@ mod az_light_switch {
             });
 
             // store record
-            self.records.set(&Record {
+            self.records.create(&Record {
                 caller: Self::env().caller(),
                 on: self.on,
                 block_height: self.env().block_number(),
