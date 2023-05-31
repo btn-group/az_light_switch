@@ -19,6 +19,7 @@ mod az_light_switch {
         IncorrectFee,
         InsufficientBalance,
         InsufficientTimePassed,
+        RecordsLimitReached,
     }
 
     // === STRUCTS ===
@@ -54,27 +55,28 @@ mod az_light_switch {
     impl Records {
         pub fn index(&self, page: u32, size: u8) -> Vec<Record> {
             let mut records: Vec<Record> = vec![];
-            if self.length == 0 {
+            if self.length == 0 || size == 0 {
                 return records;
             }
 
-            let records_to_skip: Option<u32> = page.checked_mul(size.into());
-            let starting_number: u32;
-            let ending_number: u32;
-            if records_to_skip.is_none() {
-                ending_number = u32::MAX;
-                starting_number = ending_number.checked_sub(size.into()).unwrap();
-            } else {
-                let records_to_skip_unwrapped: u32 = records_to_skip.unwrap();
-                let ending_number_wrapped: Option<u32> =
-                    self.length.checked_sub(records_to_skip_unwrapped);
-                if ending_number_wrapped.is_none() {
+            let records_to_skip_wrapped: Option<u32> = page.checked_mul(size.into());
+            let ending_index: u32;
+            let starting_index: u32;
+            // If there's two items 0 and 1
+            // If we're skipping zero items we want index 1..=0
+            // when skipping 1 item, we want index 0..=0
+            // If records_to_skip is greater than the length, return empty
+            if let Some(records_to_skip) = records_to_skip_wrapped {
+                if records_to_skip >= self.length {
                     return records;
                 }
-                ending_number = ending_number_wrapped.unwrap();
-                starting_number = ending_number.checked_sub(size.into()).unwrap_or(0);
+
+                ending_index = (self.length - 1).saturating_sub(records_to_skip);
+                starting_index = ending_index.saturating_sub(size.into());
+            } else {
+                return records;
             }
-            for i in (starting_number..=ending_number).rev() {
+            for i in (starting_index..=ending_index).rev() {
                 records.push(self.values.get(i).unwrap())
             }
             records
@@ -89,7 +91,7 @@ mod az_light_switch {
 
     #[derive(Debug, Clone, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
-    pub struct RecordsForUser {
+    pub struct RecordsForFrontEnd {
         values: Vec<Record>,
         length: u32,
     }
@@ -163,6 +165,9 @@ mod az_light_switch {
             if self.env().transferred_value() != self.on_fee {
                 return Err(LightSwitchError::IncorrectFee);
             }
+            if self.records.length == u32::MAX {
+                return Err(LightSwitchError::RecordsLimitReached);
+            }
 
             self.on_time = Some(self.env().block_timestamp());
             self.on = true;
@@ -196,6 +201,10 @@ mod az_light_switch {
             if self.env().block_timestamp() < self.on_time.unwrap() + self.minimum_on_time_in_ms {
                 return Err(LightSwitchError::InsufficientTimePassed);
             }
+            if self.records.length == u32::MAX {
+                return Err(LightSwitchError::RecordsLimitReached);
+            }
+
             if self
                 .env()
                 .transfer(self.env().caller(), self.off_payment)
@@ -242,8 +251,8 @@ mod az_light_switch {
         }
 
         #[ink(message)]
-        pub fn records(&self, page: u32, size: u8) -> RecordsForUser {
-            RecordsForUser {
+        pub fn records(&self, page: u32, size: u8) -> RecordsForFrontEnd {
+            RecordsForFrontEnd {
                 values: self.records.index(page, size),
                 length: self.records.length,
             }
@@ -301,6 +310,40 @@ mod az_light_switch {
         }
 
         // === TESTS ===
+        #[ink::test]
+        fn test_records() {
+            let _accounts = test_utils::accounts();
+            let mut az_light_switch = LightSwitch::new(1, 1, 1);
+            // when records do not exist
+            let mut result = az_light_switch.records(0, 0);
+            // * it returns empty values
+            assert_eq!(result.values.len(), 0);
+            // * it returns a length of 0
+            assert_eq!(result.length, 0);
+
+            // when records exist
+            ink::env::test::set_value_transferred::<ink::env::DefaultEnvironment>(
+                az_light_switch.on_fee,
+            );
+            let _ = az_light_switch.turn_on();
+            // = when page is 0 and size is 0
+            result = az_light_switch.records(0, 0);
+            // == when page is 0 and size is 0
+            // == * it returns an empty array
+            assert_eq!(result.values.len(), 0);
+            assert_eq!(result.length, 1);
+            // == when page is 0 and size is 1
+            result = az_light_switch.records(0, 1);
+            // == * it return the record and a length of 1
+            assert_eq!(result.values.len(), 1);
+            assert_eq!(result.length, 1);
+            // == when page is 1 and size is 1
+            result = az_light_switch.records(1, 1);
+            // == * it returns an empty array
+            assert_eq!(result.values.len(), 0);
+            assert_eq!(result.length, 1);
+        }
+
         #[ink::test]
         fn test_turn_off() {
             let accounts = test_utils::accounts();
