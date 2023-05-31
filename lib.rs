@@ -41,6 +41,7 @@ mod az_light_switch {
     )]
     #[derive(Debug, Clone)]
     pub struct Record {
+        id: u32,
         caller: AccountId,
         on: bool,
         block_height: BlockNumber,
@@ -182,6 +183,7 @@ mod az_light_switch {
 
             // store record
             self.records.create(&Record {
+                id: self.records.length,
                 caller: Self::env().caller(),
                 on: self.on,
                 block_height: self.env().block_number(),
@@ -230,6 +232,7 @@ mod az_light_switch {
 
             // store record
             self.records.create(&Record {
+                id: self.records.length,
                 caller: Self::env().caller(),
                 on: self.on,
                 block_height: self.env().block_number(),
